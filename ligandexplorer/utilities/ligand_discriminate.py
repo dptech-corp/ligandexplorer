@@ -143,7 +143,7 @@ def ligand_identify(work_path=None, input_pdb= None, search_mode= None, LGBM_Mod
         protein_file = os.path.join(work_path, 'protein.pdb')
         mol_classfication = load_model_and_pred(ligand_file, LGBM_Model_package )
         ligand_classfication = load_model_and_pred_ligand(protein_pdb= protein_file, ligand_pdb= ligand_file, LGBM_Model_package= LGBM_Model_package)
-        print(mol_classfication, ligand_classfication)
+        # print(mol_classfication, ligand_classfication)
         if mol_classfication == 'dna':
             if ligand_classfication == 0:
                 new_f = os.path.join(work_path, 'Other_DNA_' + ligand)

@@ -110,9 +110,9 @@ def extract_archive(archive_path, output_path):
     except Exception as e:  
         raise RuntimeError(f"Extraction error for file '{archive_path}': {e}")    
     
-def worker(real_work_path, pdb_name, search_mode, identify_lig, boxsize, fix_pdb, debug_mode):
+def worker(real_work_path, pdb_name, search_mode, identify_lig, boxsize, fix_pdb, LGBM_Model_package, debug_mode):
     try:
-        ligandexplorer_workflow(real_work_path, pdb_name, search_mode, identify_lig, boxsize, fix_pdb, debug_mode )  
+        ligandexplorer_workflow(real_work_path, pdb_name, search_mode, identify_lig, boxsize, fix_pdb, LGBM_Model_package, debug_mode )  
     except Exception as e:
         with open('error.txt', 'a') as f_err:
             str_output = str(real_work_path) + '|' + str(e)
@@ -130,7 +130,7 @@ def str2bool(v):
             raise argparse.ArgumentTypeError('Boolean value expected.')
         
 def worker_wrapper(task):  
-    src_file, dest_dir, pdb_name, search_mode, identify_ligand, boxsize, fix_pdb, debug_mode = task
+    src_file, dest_dir, pdb_name, search_mode, identify_ligand, boxsize, fix_pdb, LGBM_Model_package, debug_mode = task
     if not ModelContainer.models_loaded:
         script_dir = pkg_resources.resource_filename('ligandexplorer', 'model')
         model_1_pkl_file = os.path.join(script_dir, 'model_1.pkl')
@@ -155,7 +155,7 @@ def worker_wrapper(task):
         print('Models loaded successfully')
     os.makedirs(dest_dir, exist_ok= True)
     shutil.move(src_file, os.path.join(dest_dir, os.path.basename(src_file)))
-    worker(dest_dir, pdb_name, search_mode, identify_ligand, boxsize, fix_pdb, debug_mode)
+    worker(dest_dir, pdb_name, search_mode, identify_ligand, boxsize, fix_pdb, LGBM_Model_package, debug_mode)
 
 class ModelContainer:
     models_loaded = False
@@ -250,7 +250,7 @@ def main():
                     identify_ligand,
                     boxsize,
                     fix_pdb,
-                    # LGBM_Model_package,
+                    None, # LGBM model
                     debug_mode
                 ))
 
@@ -267,8 +267,8 @@ def main():
     finally:  
         pool.close()  
         pool.join()  
-    import time
-    print(time.time())
+    # import time
+    # print(time.time())
     print('====== ALL JOB DONE ======')
 
 if __name__ == '__main__':
