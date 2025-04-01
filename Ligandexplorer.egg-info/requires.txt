@@ -1,0 +1,7 @@
+setuptools_scm
+rarfile
+networkx
+biopython
+numpy
+lightGBM
+scikit-learn==1.5.1
