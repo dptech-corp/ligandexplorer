@@ -137,13 +137,11 @@ def ligand_identify(work_path=None, input_pdb= None, search_mode= None, LGBM_Mod
     other_pdb_file = [ input_pdb, 'protein.pdb', 'water.pdb', 'fix.pdb']
     ligands_file = [ f for f in os.listdir(work_path) if os.path.splitext(f)[-1] == '.pdb' ]
     ligands = [ lig for lig in ligands_file if lig not in other_pdb_file ]
-    print('ligand identify')
     for ligand in ligands:
         ligand_file = os.path.join(work_path, ligand)
         protein_file = os.path.join(work_path, 'protein.pdb')
         mol_classfication = load_model_and_pred(ligand_file, LGBM_Model_package )
         ligand_classfication = load_model_and_pred_ligand(protein_pdb= protein_file, ligand_pdb= ligand_file, LGBM_Model_package= LGBM_Model_package)
-        # print(mol_classfication, ligand_classfication)
         if mol_classfication == 'dna':
             if ligand_classfication == 0:
                 new_f = os.path.join(work_path, 'Other_DNA_' + ligand)

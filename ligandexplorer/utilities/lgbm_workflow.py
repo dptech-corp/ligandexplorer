@@ -1364,10 +1364,10 @@ def count_nearby_atoms(protein, ligand, min_cut_off, max_cut_off):
                     if atom.element != 'H' ]
     protein_coords = np.array([atom.coord for atom in protein_atoms])
     ligand_coords = np.array([atom.coord for atom in ligand_atoms])
-
+    if protein_coords.ndim == 1:
+        protein_coords = protein_coords.reshape((0,3))
     deltas = protein_coords[:, None, :] - ligand_coords[None, :, :]
     distances = np.linalg.norm(deltas, axis= 2)
-
     valid_mask = (distances > min_cut_off) & (distances < max_cut_off)
     nearby_indices = np.any(valid_mask, axis= 1)
     nearby_atoms = [protein_atoms[i] for i in np.where(nearby_indices)[0]]
@@ -1400,6 +1400,9 @@ def hbond_features(protein, ligand, cut_off= 3.5):
     protein_coords = np.array(polar_protein)
     ligand_coords = np.array(polar_ligand)
 
+    if protein_coords.ndim == 1:
+        protein_coords = protein_coords.reshape((0,3))
+
     distance = np.linalg.norm(
         protein_coords[:, None, :] - ligand_coords[None, :, :],
         axis= 2
@@ -1422,11 +1425,11 @@ def hydrophobic_environment(protein, ligand, cut_off= 3.0):
     
     polar_element = {'O', 'N', 'F', 'CL', 'BR', 'I', 'P'}
     protein_elements, protein_coords = zip(*protein_atoms)
-    protein_coords = np.array(protein_coords)
+    protein_coords = np.array(protein_coords, dtype= float).reshape(-1,3)
     protein_polar = np.array([e in polar_element for e in protein_elements], dtype= bool)
 
     ligand_elements, ligand_coords = zip(*ligand_atoms)
-    ligand_coords = np.array(ligand_coords)
+    ligand_coords = np.array(ligand_coords,dtype=float).reshape(-1,3)
     ligand_polar = np.array([ e in polar_element for e in ligand_elements], dtype= bool)
 
     deltas = protein_coords[:, None, :] - ligand_coords[None, :, :]
@@ -1522,8 +1525,8 @@ def load_model_and_pred(input_pdb, LGBM_Model_package):
     '''  
     try:
         from ligandexplorer.workflow import ModelContainer
-        if ModelContainer.model_1 is None:
-            raise RuntimeError('model was not load0')
+        if ModelContainer.model_1 is None or ModelContainer.model_2 is None:
+            raise RuntimeError('model-1 or model-2 was not load')
         ligand_str = read_file(input_pdb)
         features = get_features(ligand_str)
         features = np.array(features).reshape(1,-1)
@@ -1545,7 +1548,7 @@ def load_model_and_pred(input_pdb, LGBM_Model_package):
         elif int(prediction[0]) == 0:
             return 'ions'
         elif int(prediction[0]) == 1:
-            return 'men'
+            return 'mem'
         # return prediction[0]
     except ImportError as e:
         print(e)
@@ -1559,10 +1562,8 @@ def load_model_and_pred_ligand(protein_pdb, ligand_pdb, LGBM_Model_package):
     '''
     try:
         from ligandexplorer.workflow import ModelContainer
-        if ModelContainer.model_1 is None:
-            raise RuntimeError('model was not load0')
-        # model_3 = LGBM_Model_package[4]
-        # scaler_3 = LGBM_Model_package[5]
+        if ModelContainer.model_3 is None:
+            raise RuntimeError('model-3 was not load0')
         features = ligand_classification_features(protein_pdb, ligand_pdb)
         features = np.array(features).reshape(1,-1)
         scaler_features = ModelContainer.scaler_3.transform(features)
