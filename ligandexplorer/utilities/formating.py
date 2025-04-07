@@ -11,8 +11,8 @@ def format_pdb_file(work_path=None, input_file=None, fix_pdb= False, debug= Fals
 
         def accept_residue(self, residue):
             if self.keep_water:
-                return residue.get_resname() in ['HOH', 'WAT', 'OPC', 'T3P']
-            return residue.get_resname() not in ['HOH', 'WAT', 'OPC', 'T3P']
+                return residue.get_resname() in ['HOH', 'WAT', 'SOL', 'OPC', 'SPC', 'T3P', 'TIP']
+            return residue.get_resname() not in ['HOH', 'WAT', 'SOL', 'OPC', 'SPC', 'T3P', 'TIP']
         
         def accept_atom(self, atom):
             residue = atom.get_parent()
