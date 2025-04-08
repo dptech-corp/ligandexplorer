@@ -1,0 +1,40 @@
+
+FROM registry.dp.tech/dptech/ubuntu:22.04-py3.10
+
+RUN apt-get update && apt-get install -y \
+    wget \
+    bzip2 \
+    ca-certificates \
+    libglib2.0-0 \
+    libxext6 \
+    libsm6 \
+    libxrender1 \
+    git \
+    && apt-get clean
+
+# 下载并安装 Miniconda
+RUN wget --quiet https://mirrors.tuna.tsinghua.edu.cn/anaconda/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
+    /bin/bash /tmp/miniconda.sh -b -p /opt/conda && \
+    rm /tmp/miniconda.sh
+
+# 设置环境变量
+ENV PATH /opt/conda/bin:$PATH
+
+# 设置 conda 使用中国的镜像源
+RUN conda config --add channels https://mirrors.ustc.edu.cn/anaconda/pkgs/main/ && \
+    conda config --add channels https://mirrors.ustc.edu.cn/anaconda/pkgs/free/ && \
+    conda config --set show_channel_urls yes
+
+COPY . /opt/ligand_explorer
+
+RUN conda env create -f /opt/ligand_explorer/app/containers/environment.yml && \
+    echo "source activate ligand_explorer" > ~/.bashrc
+
+ENV PATH /opt/conda/envs/ligand_explorer/bin:$PATH
+
+WORKDIR /opt/ligand_explorer
+RUN /bin/bash -c "source activate ligand_explorer && python setup.py install"
+
+WORKDIR /opt/ligand_explorer/app
+
+CMD ["/bin/bash", "-c", "source activate ligand_explorer && python app.py"]
