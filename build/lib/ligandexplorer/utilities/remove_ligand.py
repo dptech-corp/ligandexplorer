@@ -2,20 +2,22 @@ import os
 import shutil
 from Bio.PDB import PDBParser, PDBIO, NeighborSearch, Selection
 from Bio.PDB.PDBIO import Select
+from ligandexplorer.utilities.formating import get_parser, save_structure
 
 def save_protein_without_ligand(work_path=None, protein_pdb=None, init_pdb=None):
+    ext = '.cif' if protein_pdb.endswith('.cif') or protein_pdb.endswith('.mmcif') else '.pdb'
     input_protein = os.path.join(work_path, protein_pdb)
-    output_protein = os.path.join(work_path, 'protein.pdb')
-    other_pdb_files = [protein_pdb, 'protein.pdb', 'wat.pdb', 'fix.pdb']
+    output_protein = os.path.join(work_path, 'protein' + ext)
+    other_pdb_files = [protein_pdb, 'protein' + ext, 'wat' + ext, 'fix' + ext, 'format' + ext, 'water' + ext]
 
     ligands_file = [f for f in os.listdir(work_path) 
-                   if f.endswith('.pdb') and f not in other_pdb_files]
+                   if f.endswith(ext) and f not in other_pdb_files]
     
     if not ligands_file:
         shutil.copy(input_protein, output_protein)
         return
     
-    parser = PDBParser(QUIET=True)
+    parser = get_parser(input_protein, QUIET=True)
     structure = parser.get_structure('protein', input_protein)
     protein_atoms = Selection.unfold_entities(structure, 'A')  
     ns = NeighborSearch(protein_atoms)
@@ -38,6 +40,7 @@ def save_protein_without_ligand(work_path=None, protein_pdb=None, init_pdb=None)
                 return False
             return True
 
-    io = PDBIO()
-    io.set_structure(structure)
-    io.save(output_protein, select=RemoveResiduesSelect())
+    save_structure(structure, output_protein, select=RemoveResiduesSelect())
+    # io = PDBIO()
+    # io.set_structure(structure)
+    # io.save(output_protein, select=RemoveResiduesSelect())

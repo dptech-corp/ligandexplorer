@@ -6,11 +6,12 @@ from Bio.PDB import PDBParser, Selection
 import networkx as nx
 from networkx.algorithms.isomorphism import GraphMatcher
 import warnings
+from ligandexplorer.utilities.formating import get_parser
 
 warnings.filterwarnings("ignore")
 
 def read_file(input_pdb):
-    parser = PDBParser(QUIET= True)
+    parser = get_parser(input_pdb, QUIET= True)
     structure = parser.get_structure('str', input_pdb)
 
     for model in structure:
@@ -1348,9 +1349,10 @@ def get_features(bio_str):
     return features
     
 def count_nearby_atoms(protein, ligand, min_cut_off, max_cut_off):
-    parser = PDBParser()
-    str_protein = parser.get_structure('prot', protein)
-    str_ligand = parser.get_structure('pept', ligand)
+    parser_prot = get_parser(protein)
+    str_protein = parser_prot.get_structure('prot', protein)
+    parser_lig = get_parser(ligand)
+    str_ligand = parser_lig.get_structure('pept', ligand)
     
     protein_atoms = [ atom for model in str_protein
                      for chain in model
@@ -1386,9 +1388,10 @@ def count_nearby_atoms(protein, ligand, min_cut_off, max_cut_off):
     return features
 
 def hbond_features(protein, ligand, cut_off= 3.5):
-    parser = PDBParser()
-    protein_str = parser.get_structure('protein', protein)
-    ligand_str = parser.get_structure('ligand', ligand)
+    parser_prot = get_parser(protein)
+    protein_str = parser_prot.get_structure('protein', protein)
+    parser_lig = get_parser(ligand)
+    ligand_str = parser_lig.get_structure('ligand', ligand)
     polar_protein = [atom.coord for atom in Selection.unfold_entities(protein_str, 'A')
                      if atom.element in ['N', 'O']
                      ]
@@ -1411,9 +1414,10 @@ def hbond_features(protein, ligand, cut_off= 3.5):
     return [contact_count]
 
 def hydrophobic_environment(protein, ligand, cut_off= 3.0):
-    parser = PDBParser()
-    protein_str = parser.get_structure('protein', protein)
-    ligand_str = parser.get_structure('ligand', ligand)
+    parser_prot = get_parser(protein)
+    protein_str = parser_prot.get_structure('protein', protein)
+    parser_lig = get_parser(ligand)
+    ligand_str = parser_lig.get_structure('ligand', ligand)
     protein_atoms = [ (atom.element, atom.coord)
                      for atom in Selection.unfold_entities(protein_str, 'A') 
                      if atom.element != 'H']
@@ -1448,9 +1452,10 @@ def hydrophobic_environment(protein, ligand, cut_off= 3.0):
     return [hydrophobic_mismatch, hydrophobic_contact ]
 
 def electrostatic_environment(protein, ligand, cut_off= 6.0):
-    parser = PDBParser()
-    protein_str = parser.get_structure('protein', protein)
-    ligand_str = parser.get_structure('ligand', ligand)
+    parser_prot = get_parser(protein)
+    protein_str = parser_prot.get_structure('protein', protein)
+    parser_lig = get_parser(ligand)
+    ligand_str = parser_lig.get_structure('ligand', ligand)
 
     positive_elements = { 'N', 'FE', 'ZN', 'CU', 'MN', 'CO', 'NI', 'MG', 'CA', 'K', 'NA', 'LI'}
     negative_elements = { 'O', 'S', 'CL', 'BR', 'I' , 'P'}

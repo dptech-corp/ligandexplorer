@@ -2,6 +2,7 @@ import os
 import json
 from Bio.PDB import *
 from Bio.PDB import PDBParser
+from ligandexplorer.utilities.formating import get_parser
 
 import warnings
 from Bio import BiopythonWarning
@@ -14,7 +15,7 @@ def calculated_docking_grid(work_path, ligand_file, add_size= 10):
     input_path = os.path.join(work_path, ligand_file)
     output_grid = os.path.join(work_path, ligand_file.split('.')[0] + '.json')
     
-    parser = PDBParser(QUIET= True)
+    parser = get_parser(input_path, QUIET= True)
     structure = parser.get_structure('mol', input_path)
     atoms = list(structure.get_atoms())
     if not atoms:

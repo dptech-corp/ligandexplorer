@@ -1,3 +1,4 @@
+.gitingore
 README.md
 pyproject.toml
 setup.py
@@ -8,11 +9,22 @@ Ligandexplorer.egg-info/entry_points.txt
 Ligandexplorer.egg-info/not-zip-safe
 Ligandexplorer.egg-info/requires.txt
 Ligandexplorer.egg-info/top_level.txt
+app/app.py
+app/apps/__init__.py
+app/apps/ligand_explorer.py
+app/containers/dockerfile
+app/containers/environment.yml
+app/fns/__init__.py
+app/fns/app_utils.py
+app/fns/view_fn.py
 dist/Ligandexplorer-0.1.dev1+g02a575b.d20250312-py3.12.egg
 dist/Ligandexplorer-0.1.dev1+g02a575b.d20250313-py3.10.egg
 dist/Ligandexplorer-0.1.dev1+g02a575b.d20250313-py3.12.egg
 dist/Ligandexplorer-0.1.dev1+g02a575b.d20250314-py3.10.egg
 dist/Ligandexplorer-0.1.dev1+g02a575b.d20250401-py3.10.egg
+dist/Ligandexplorer-0.1.dev4+g13a963b-py3.10.egg
+dist/Ligandexplorer-0.1.dev4+g13a963b.d20250403-py3.10.egg
+dist/Ligandexplorer-0.1.dev4+g13a963b.d20250404-py3.10.egg
 ligandexplorer/__init__.py
 ligandexplorer/_version.py
 ligandexplorer/workflow.py

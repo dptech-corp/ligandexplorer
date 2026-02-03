@@ -8,6 +8,7 @@ from Bio.PDB import PDBParser, NeighborSearch
 from Bio.PDB.Superimposer import Superimposer
 from ligandexplorer.utilities.calculated_docking_grid import calculated_docking_grid
 from ligandexplorer.utilities.lgbm_workflow import load_model_and_pred, load_model_and_pred_ligand
+from ligandexplorer.utilities.formating import get_parser
 
 import warnings
 from Bio import BiopythonWarning
@@ -89,6 +90,9 @@ def get_rmsd(str1, str2):
     if len(atoms1) != len(atoms2):
         return 999
     
+    if len(atoms1) == 0:
+        return 0
+
     elements = ['C', 'N', 'O', 'S', 'P', 'CL', 'BR']
     str1_atoms = {element: sum(1 for atom in atoms1 if atom.element == element) for element in elements}
     str2_atoms = {element: sum(1 for atom in atoms2 if atom.element == element) for element in elements}
@@ -134,12 +138,13 @@ def ligand_identify(work_path=None, input_pdb= None, search_mode= None, LGBM_Mod
     5: peptide
     6: rna
     '''
-    other_pdb_file = [ input_pdb, 'protein.pdb', 'water.pdb', 'fix.pdb']
-    ligands_file = [ f for f in os.listdir(work_path) if os.path.splitext(f)[-1] == '.pdb' ]
+    ext = '.cif' if input_pdb.endswith('.cif') or input_pdb.endswith('.mmcif') else '.pdb'
+    other_pdb_file = [ input_pdb, 'protein' + ext, 'water' + ext, 'fix' + ext]
+    ligands_file = [ f for f in os.listdir(work_path) if f.endswith(ext) ]
     ligands = [ lig for lig in ligands_file if lig not in other_pdb_file ]
     for ligand in ligands:
         ligand_file = os.path.join(work_path, ligand)
-        protein_file = os.path.join(work_path, 'protein.pdb')
+        protein_file = os.path.join(work_path, 'protein' + ext)
         mol_classfication = load_model_and_pred(ligand_file, LGBM_Model_package )
         ligand_classfication = load_model_and_pred_ligand(protein_pdb= protein_file, ligand_pdb= ligand_file, LGBM_Model_package= LGBM_Model_package)
         if mol_classfication == 'dna':
@@ -205,15 +210,15 @@ def ligand_identify(work_path=None, input_pdb= None, search_mode= None, LGBM_Mod
                 print(f">>> {ligand} is RNA, it is a ligand")
             os.rename(ligand_file, new_f)
     # remove the same ligands
-    parser = PDBParser(QUIET= True)   
+    parser = get_parser(input_pdb, QUIET= True)   
     if search_mode == 'strict':
         exclude_title = ('Other_')
         
         identify_ligand_files = [ f for f in os.listdir(work_path) 
-                                 if os.path.splitext(f)[-1] == '.pdb' 
+                                 if f.endswith(ext) 
                                  and f not in other_pdb_file 
                                  and not f.startswith(exclude_title) ]
-        rmsd_cut_off = 2.0
+        rmsd_cut_off = 0.8
         if len(identify_ligand_files) >= 2:
             identify_str = {}
             atom_count_set = {}
@@ -256,7 +261,7 @@ def ligand_identify(work_path=None, input_pdb= None, search_mode= None, LGBM_Mod
     print(f'>>> ligands identify: {work_path} Job Done')
     print('>>> Calculate docking grid')
     # calculated docking grid
-    docking_grid_ligand = [ f for f in os.listdir(work_path) if os.path.splitext(f)[-1] == '.pdb' and f not in other_pdb_file and not f.startswith('Other_') ]
+    docking_grid_ligand = [ f for f in os.listdir(work_path) if f.endswith(ext) and f not in other_pdb_file and not f.startswith('Other_') ]
     for final_f in docking_grid_ligand:
         calculated_docking_grid(work_path, final_f, add_size= add_size)
     

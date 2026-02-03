@@ -1,6 +1,6 @@
 try:
     from pdbfixer import PDBFixer 
-    from openmm.app import PDBFile
+    from openmm.app import PDBFile, PDBxFile
     import argparse
     pdbfixer_stat = True
 except:
@@ -27,10 +27,16 @@ def fix_pdb_structure(input_file, output_file):
                 new_atoms = [ atom for atom in atoms if atom.name in main_chain_atoms ]
                 fixer.missingAtoms[key] = new_atoms
             fixer.addMissingAtoms()
-            PDBFile.writeFile(
-                fixer.topology,
-                fixer.positions,
-                open(output_file, 'w'), keepIds= True)
+            if output_file.endswith('.cif') or output_file.endswith('.mmcif'):
+                 PDBxFile.writeFile(
+                    fixer.topology,
+                    fixer.positions,
+                    open(output_file, 'w'), keepIds= True)
+            else:
+                PDBFile.writeFile(
+                    fixer.topology,
+                    fixer.positions,
+                    open(output_file, 'w'), keepIds= True)
             print(f"Structure {input_file} has been fixed")
             return True
         except Exception as e:

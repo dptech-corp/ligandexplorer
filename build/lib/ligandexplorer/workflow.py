@@ -4,6 +4,7 @@ import zipfile
 import tarfile
 import rarfile
 import shutil
+import traceback
 import pickle
 import pkg_resources
 import argparse
@@ -24,9 +25,15 @@ from ligandexplorer.utilities.model_wrapper import ModelWrapper
 sys.modules['__main__'].ModelWrapper = ModelWrapper
 
 def ligandexplorer_workflow(work_path, pdb_file, search_mode, identify_lig, box_size= 10, fix_pdb= False, LGBM_Model_package= None, debug= False ):
-    input_pdb = pdb_file + '.pdb'
+    if os.path.exists(os.path.join(work_path, pdb_file + '.cif')):
+        input_pdb = pdb_file + '.cif'
+    elif os.path.exists(os.path.join(work_path, pdb_file + '.mmcif')):
+        input_pdb = pdb_file + '.mmcif'
+    else:
+        input_pdb = pdb_file + '.pdb'
     # if file is empty, kill
     if is_empty_file(os.path.join(work_path, input_pdb)):
+
         return 999
     if debug:
             format_pdb_file(work_path= work_path, input_file= input_pdb, fix_pdb= fix_pdb, debug= True)
@@ -51,8 +58,9 @@ def ligandexplorer_workflow(work_path, pdb_file, search_mode, identify_lig, box_
         if identify_lig:
             ligand_identify(work_path, input_pdb, search_mode, LGBM_Model_package= LGBM_Model_package, add_size=box_size)
         else:
-            other_pdb_file = [input_pdb, 'protein.pdb', 'water.pdb']
-            all_ligand = [ f for f in os.listdir(work_path) if os.path.splitext(f)[-1] == '.pdb' and f not in other_pdb_file ]
+            ext = '.cif' if input_pdb.endswith('.cif') or input_pdb.endswith('.mmcif') else '.pdb'
+            other_pdb_file = [input_pdb, 'protein' + ext, 'water' + ext]
+            all_ligand = [ f for f in os.listdir(work_path) if f.endswith(ext) and f not in other_pdb_file ]
             for final_f in all_ligand:
                 calculated_docking_grid(work_path, final_f, add_size= box_size)
 
@@ -65,7 +73,7 @@ def extract_archive(archive_path, output_path):
         output_path: Path to the directory where PDB files will be extracted.  
     """  
     def is_pdb_file(filename):  
-        return filename.lower().endswith('.pdb')  
+        return filename.lower().endswith('.pdb') or filename.lower().endswith('.cif') or filename.lower().endswith('.mmcif')  
 
     def extract_from_zip(archive_path, output_path):  
         with zipfile.ZipFile(archive_path, 'r') as zip_ref:  
@@ -90,7 +98,7 @@ def extract_archive(archive_path, output_path):
 
     def extract_from_7z(archive_path, output_path):  
       try:  
-          subprocess.run(['7z', 'e', archive_path, '-o' + output_path, '*.pdb'], check=True, capture_output=True, text=True) # Extract only PDBs for 7zip  
+          subprocess.run(['7z', 'e', archive_path, '-o' + output_path, '*.pdb', '*.cif', '*.mmcif'], check=True, capture_output=True, text=True) # Extract PDBs and CIFs for 7zip  
       except FileNotFoundError:  
           raise RuntimeError("7z is not installed. Please install p7zip.")  
       except subprocess.CalledProcessError as e:  
@@ -118,6 +126,7 @@ def worker(real_work_path, pdb_name, search_mode, identify_lig, boxsize, fix_pdb
             str_output = str(real_work_path) + '|' + str(e)
             f_err.write(str_output + '\n') 
         print(f"!!!!! Error in process: {e}")
+        traceback.print_exc()
 
 def str2bool(v):
         if isinstance(v, bool):
@@ -238,7 +247,7 @@ def main():
     tasks = []
     for root, dirs, files in os.walk(output_path):
         for file in files:
-            if file.endswith('.pdb'):
+            if file.endswith('.pdb') or file.lower().endswith('.cif') or file.lower().endswith('.mmcif'):
                 pdb_name = os.path.splitext(file)[0]
                 src_path = os.path.join(root, file)
                 dest_dir = os.path.join(output_path, pdb_name)
