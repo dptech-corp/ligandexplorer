@@ -151,4 +151,48 @@ options:
 
 If you use LigandExplorer in your research, please cite:
 
-> Li Y, Zou R, Yang M, et al. LigandExplorer: An Automated Tool for Ligand Extraction from PDB Structures[J]. *Journal of Chemical Information and Modeling*, 2026, 66(6): 3026-3035.
+> Li, Y.; Zou, R.; Yang, M.; Wang, Y.; Liu, Z.; Zheng, H. LigandExplorer: An Automated Tool for Ligand Extraction from PDB Structures. *J. Chem. Inf. Model.* **2026**, *66* (6), 3026–3035. DOI: [10.1021/acs.jcim.5c02921](https://doi.org/10.1021/acs.jcim.5c02921)
+
+<details>
+<summary>BibTeX</summary>
+
+```bibtex
+@article{Li2026LigandExplorer,
+  author    = {Li, Yaqi and Zou, Rongfeng and Yang, Maohua and Wang, Ying and Liu, Zhonghua and Zheng, Hang},
+  title     = {LigandExplorer: An Automated Tool for Ligand Extraction from PDB Structures},
+  journal   = {Journal of Chemical Information and Modeling},
+  year      = {2026},
+  volume    = {66},
+  number    = {6},
+  pages     = {3026--3035},
+  doi       = {10.1021/acs.jcim.5c02921},
+  pmid      = {41762111},
+}
+```
+
+</details>
+
+<details>
+<summary>RIS (EndNote, Zotero, Mendeley)</summary>
+
+```ris
+TY  - JOUR
+AU  - Li, Yaqi
+AU  - Zou, Rongfeng
+AU  - Yang, Maohua
+AU  - Wang, Ying
+AU  - Liu, Zhonghua
+AU  - Zheng, Hang
+TI  - LigandExplorer: An Automated Tool for Ligand Extraction from PDB Structures
+JO  - Journal of Chemical Information and Modeling
+PY  - 2026
+VL  - 66
+IS  - 6
+SP  - 3026
+EP  - 3035
+DO  - 10.1021/acs.jcim.5c02921
+PM  - 41762111
+ER  -
+```
+
+</details>
