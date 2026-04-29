@@ -990,8 +990,6 @@ def get_features(bio_str):
                   (5, {'element': 'C', 'connect': 2}),
                   (6, {'element': 'C', 'connect': 2}),
                   (7, {'element': 'C', 'connect': 2}),
-                  (6, {'element': 'C', 'connect': 2}),
-                  (7, {'element': 'C', 'connect': 2}),
                   (8, {'element': 'C', 'connect': 2}),
                   (9, {'element': 'C', 'connect': 2})]
     c9_edge = [(1,2), (2,3), (3,4), (4,5), (5,6), (6,7), (7,8), (8,9)]
@@ -1003,8 +1001,6 @@ def get_features(bio_str):
                   (3, {'element': 'C', 'connect': 2}),
                   (4, {'element': 'C', 'connect': 2}),
                   (5, {'element': 'C', 'connect': 2}),
-                  (6, {'element': 'C', 'connect': 2}),
-                  (7, {'element': 'C', 'connect': 2}),
                   (6, {'element': 'C', 'connect': 2}),
                   (7, {'element': 'C', 'connect': 2}),
                   (8, {'element': 'C', 'connect': 2}),
@@ -1020,8 +1016,6 @@ def get_features(bio_str):
                   (3, {'element': 'C', 'connect': 2}),
                   (4, {'element': 'C', 'connect': 2}),
                   (5, {'element': 'C', 'connect': 2}),
-                  (6, {'element': 'C', 'connect': 2}),
-                  (7, {'element': 'C', 'connect': 2}),
                   (6, {'element': 'C', 'connect': 2}),
                   (7, {'element': 'C', 'connect': 2}),
                   (8, {'element': 'C', 'connect': 2}),
@@ -1550,15 +1544,17 @@ def load_model_and_pred(input_pdb, LGBM_Model_package):
                 return 'peptide'
             elif int(prediction[0]) == 4:
                 return 'rna'
+            else:
+                return 'organic'
         elif int(prediction[0]) == 0:
             return 'ions'
         elif int(prediction[0]) == 1:
             return 'mem'
-        # return prediction[0]
-    except ImportError as e:
-        print(e)
-    except AttributeError as e:
-        print(e)
+        else:
+            return 'organic'
+    except (ImportError, AttributeError, Exception) as e:
+        print(f"LGBM mol prediction error: {e}")
+        return 'organic'
 
 def load_model_and_pred_ligand(protein_pdb, ligand_pdb, LGBM_Model_package):
     '''
@@ -1568,16 +1564,15 @@ def load_model_and_pred_ligand(protein_pdb, ligand_pdb, LGBM_Model_package):
     try:
         from ligandexplorer.workflow import ModelContainer
         if ModelContainer.model_3 is None:
-            raise RuntimeError('model-3 was not load0')
+            raise RuntimeError('model-3 was not loaded')
         features = ligand_classification_features(protein_pdb, ligand_pdb)
         features = np.array(features).reshape(1,-1)
         scaler_features = ModelContainer.scaler_3.transform(features)
         prediction = ModelContainer.model_3.predict(scaler_features)
         return prediction[0]
-    except ImportError as e:
-        print(e)
-    except AttributeError as e:
-        print(e)
+    except (ImportError, AttributeError, Exception) as e:
+        print(f"LGBM ligand prediction error: {e}")
+        return 0
 
 
 

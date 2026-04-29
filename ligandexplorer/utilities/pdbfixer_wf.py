@@ -28,15 +28,17 @@ def fix_pdb_structure(input_file, output_file):
                 fixer.missingAtoms[key] = new_atoms
             fixer.addMissingAtoms()
             if output_file.endswith('.cif') or output_file.endswith('.mmcif'):
-                 PDBxFile.writeFile(
-                    fixer.topology,
-                    fixer.positions,
-                    open(output_file, 'w'), keepIds= True)
+                with open(output_file, 'w') as f_out:
+                    PDBxFile.writeFile(
+                        fixer.topology,
+                        fixer.positions,
+                        f_out, keepIds=True)
             else:
-                PDBFile.writeFile(
-                    fixer.topology,
-                    fixer.positions,
-                    open(output_file, 'w'), keepIds= True)
+                with open(output_file, 'w') as f_out:
+                    PDBFile.writeFile(
+                        fixer.topology,
+                        fixer.positions,
+                        f_out, keepIds=True)
             print(f"Structure {input_file} has been fixed")
             return True
         except Exception as e:

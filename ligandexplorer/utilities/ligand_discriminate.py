@@ -7,7 +7,14 @@ from Bio.PDB import *
 from Bio.PDB import PDBParser, NeighborSearch
 from Bio.PDB.Superimposer import Superimposer
 from ligandexplorer.utilities.calculated_docking_grid import calculated_docking_grid
-from ligandexplorer.utilities.lgbm_workflow import load_model_and_pred, load_model_and_pred_ligand
+def _get_predict_functions():
+    from ligandexplorer.workflow import ModelContainer
+    backend = getattr(ModelContainer, 'backend', 'gnn')
+    if backend == 'lgbm':
+        from ligandexplorer.utilities.lgbm_workflow import load_model_and_pred, load_model_and_pred_ligand
+    else:
+        from ligandexplorer.utilities.gnn_workflow import load_model_and_pred, load_model_and_pred_ligand
+    return load_model_and_pred, load_model_and_pred_ligand
 from ligandexplorer.utilities.formating import get_parser
 
 import warnings
@@ -130,23 +137,20 @@ def clean_alt_structure(structure):
 
 def ligand_identify(work_path=None, input_pdb= None, search_mode= None, LGBM_Model_package= None, add_size= None):
     '''
-    0: dna
-    1: gly
-    2: ions
-    3: mem
-    4: organic
-    5: peptide
-    6: rna
+    GNN 8-class:
+      0: peptide, 1: gly, 2: rna, 3: dna, 4: mem,
+      5: ions, 6: organic, 7: cyclic_peptide
     '''
     ext = '.cif' if input_pdb.endswith('.cif') or input_pdb.endswith('.mmcif') else '.pdb'
     other_pdb_file = [ input_pdb, 'protein' + ext, 'water' + ext, 'fix' + ext]
     ligands_file = [ f for f in os.listdir(work_path) if f.endswith(ext) ]
     ligands = [ lig for lig in ligands_file if lig not in other_pdb_file ]
+    _load_model_and_pred, _load_model_and_pred_ligand = _get_predict_functions()
     for ligand in ligands:
         ligand_file = os.path.join(work_path, ligand)
         protein_file = os.path.join(work_path, 'protein' + ext)
-        mol_classfication = load_model_and_pred(ligand_file, LGBM_Model_package )
-        ligand_classfication = load_model_and_pred_ligand(protein_pdb= protein_file, ligand_pdb= ligand_file, LGBM_Model_package= LGBM_Model_package)
+        mol_classfication = _load_model_and_pred(ligand_file, LGBM_Model_package )
+        ligand_classfication = _load_model_and_pred_ligand(protein_pdb= protein_file, ligand_pdb= ligand_file, LGBM_Model_package= LGBM_Model_package)
         if mol_classfication == 'dna':
             if ligand_classfication == 0:
                 new_f = os.path.join(work_path, 'Other_DNA_' + ligand)
@@ -208,6 +212,15 @@ def ligand_identify(work_path=None, input_pdb= None, search_mode= None, LGBM_Mod
             else:
                 new_f = os.path.join(work_path, 'Ligand_RNA_' + ligand)
                 print(f">>> {ligand} is RNA, it is a ligand")
+            os.rename(ligand_file, new_f)
+
+        elif mol_classfication == 'cyclic_peptide':
+            if ligand_classfication == 0:
+                new_f = os.path.join(work_path, 'Other_cyclic_peptide_' + ligand)
+                print(f">>> {ligand} is cyclic peptide, it is not a ligand")
+            else:
+                new_f = os.path.join(work_path, 'Ligand_cyclic_peptide_' + ligand)
+                print(f">>> {ligand} is cyclic peptide, it is a ligand")
             os.rename(ligand_file, new_f)
     # remove the same ligands
     parser = get_parser(input_pdb, QUIET= True)   

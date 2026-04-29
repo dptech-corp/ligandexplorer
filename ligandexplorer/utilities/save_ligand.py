@@ -7,6 +7,8 @@ class ResidueSelect(Select):
         self.selected_residues = selected_residues
     def accept_residue(self, residue):
         chain_id = residue.get_parent().id
+        if chain_id == " ":
+            chain_id = "!"
         resseq = residue.id[1]
         icode = residue.id[2]
         if icode != " " and icode is not None:
@@ -27,10 +29,7 @@ def parser_residue_info(residue_info_list):
         
         # Keep res_id_str as string to handle insertion codes
         
-        if chain_id == "!":
-            selected_residues.add((None, res_id_str, res_name))
-        else:
-            selected_residues.add((chain_id, res_id_str, res_name))
+        selected_residues.add((chain_id, res_id_str, res_name))
     return selected_residues
 
 def save_ligand(input_pdb, subgraph, work_path):

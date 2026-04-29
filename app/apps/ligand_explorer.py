@@ -41,10 +41,22 @@ def ligand_explorer_app():
             bufsize=1,
         )
 
-        process.wait()
+        stdout_output, _ = process.communicate()
 
-        for _, _, temps in os.walk(output_dir / complex_name):
-            break
+        target_dir = output_dir / complex_name
+        temps = []
+        if target_dir.exists():
+            for _, _, temps in os.walk(target_dir):
+                break
+
+        if not temps:
+            return (
+                gr.update(value=stdout_output or "No output", visible=True),
+                gr.update(choices=[], visible=False),
+                [],
+                gr.update(visible=False),
+                gr.update(visible=False),
+            )
 
         result_zip_path = output_dir / f"{complex_name}_ligandexplorer_result.zip"
         with zipfile.ZipFile(result_zip_path, 'w') as zipf:
@@ -55,12 +67,21 @@ def ligand_explorer_app():
         names = [name for name in names if name != Path(complex_file).name]
         files = [str(output_dir / complex_name / f) for f in names]
 
+        if not names:
+            return (
+                gr.update(value=stdout_output or "No ligands found", visible=True),
+                gr.update(choices=[], visible=False),
+                [],
+                gr.update(value=str(result_zip_path), visible=True),
+                gr.update(visible=False),
+            )
+
         return (
-            gr.update(value="\n".join([l.strip() for l in process.stdout]), visible=True),
+            gr.update(value=stdout_output, visible=True),
             gr.update(choices=names, visible=True, value=names[0]),
             files, 
             gr.update(value=str(result_zip_path), visible=True),
-            gr.update(value=select_structure(names[0], files[0]), visible=True),
+            gr.update(value=select_structure(names[0], files), visible=True),
         )
 
 

@@ -8,7 +8,6 @@ import traceback
 import pickle
 import pkg_resources
 import argparse
-import queue
 import multiprocessing
 import subprocess
 from multiprocessing import Pool
@@ -19,10 +18,12 @@ from ligandexplorer.utilities.calculated_docking_grid import calculated_docking_
 from ligandexplorer.utilities.non_covalent import non_covalent_workflow
 from ligandexplorer.utilities.covalent import find_covalent_ligand
 from ligandexplorer.utilities.remove_ligand import save_protein_without_ligand
-from ligandexplorer.utilities.model_wrapper import ModelWrapper
-# package: networkx, biopython, numpy, lightGBM, scikit-learn, pdbfixer
 
-sys.modules['__main__'].ModelWrapper = ModelWrapper
+try:
+    from ligandexplorer.utilities.model_wrapper import ModelWrapper
+    sys.modules['__main__'].ModelWrapper = ModelWrapper
+except ImportError:
+    pass
 
 def ligandexplorer_workflow(work_path, pdb_file, search_mode, identify_lig, box_size= 10, fix_pdb= False, LGBM_Model_package= None, debug= False ):
     if os.path.exists(os.path.join(work_path, pdb_file + '.cif')):
@@ -122,7 +123,8 @@ def worker(real_work_path, pdb_name, search_mode, identify_lig, boxsize, fix_pdb
     try:
         ligandexplorer_workflow(real_work_path, pdb_name, search_mode, identify_lig, boxsize, fix_pdb, LGBM_Model_package, debug_mode )  
     except Exception as e:
-        with open('error.txt', 'a') as f_err:
+        error_file = os.path.join(real_work_path, 'error.txt')
+        with open(error_file, 'a') as f_err:
             str_output = str(real_work_path) + '|' + str(e)
             f_err.write(str_output + '\n') 
         print(f"!!!!! Error in process: {e}")
@@ -138,36 +140,74 @@ def str2bool(v):
         else:
             raise argparse.ArgumentTypeError('Boolean value expected.')
         
+def _load_gnn_models():
+    import torch
+    from ligandexplorer.utilities.gnn_models import MoleculeClassifier, LigandBinaryClassifier
+    script_dir = pkg_resources.resource_filename('ligandexplorer', 'model')
+
+    req = ModelContainer.device_request
+    if req == 'cuda' and torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif req == 'cuda' and not torch.cuda.is_available():
+        print('WARNING: CUDA requested but not available, falling back to CPU')
+        device = torch.device("cpu")
+    else:
+        device = torch.device("cpu")
+    ModelContainer.device = device
+
+    mol_path = os.path.join(script_dir, 'mol_classifier.pt')
+    mol_model = MoleculeClassifier(num_classes=8)
+    mol_model.load_state_dict(torch.load(mol_path, map_location=device, weights_only=True))
+    mol_model.to(device).eval()
+    ModelContainer.mol_classifier = mol_model
+
+    lig_path = os.path.join(script_dir, 'ligand_classifier.pt')
+    lig_model = LigandBinaryClassifier()
+    lig_model.load_state_dict(torch.load(lig_path, map_location=device, weights_only=True))
+    lig_model.to(device).eval()
+    ModelContainer.ligand_classifier = lig_model
+    print(f'GNN models loaded successfully (device={device})')
+
+
+def _load_lgbm_models():
+    script_dir = pkg_resources.resource_filename('ligandexplorer', 'model')
+    with open(os.path.join(script_dir, 'model_1.pkl'), 'rb') as f:
+        ModelContainer.model_1 = pickle.load(f)
+    with open(os.path.join(script_dir, 'model_2.pkl'), 'rb') as f:
+        ModelContainer.model_2 = pickle.load(f)
+    with open(os.path.join(script_dir, 'scaler_1.pkl'), 'rb') as f:
+        ModelContainer.scaler_1 = pickle.load(f)
+    with open(os.path.join(script_dir, 'scaler_2.pkl'), 'rb') as f:
+        ModelContainer.scaler_2 = pickle.load(f)
+    with open(os.path.join(script_dir, 'model_3.pkl'), 'rb') as f:
+        ModelContainer.model_3 = pickle.load(f)
+    with open(os.path.join(script_dir, 'scaler_3.pkl'), 'rb') as f:
+        ModelContainer.scaler_3 = pickle.load(f)
+    print('LGBM models loaded successfully')
+
+
 def worker_wrapper(task):  
     src_file, dest_dir, pdb_name, search_mode, identify_ligand, boxsize, fix_pdb, LGBM_Model_package, debug_mode = task
     if not ModelContainer.models_loaded:
-        script_dir = pkg_resources.resource_filename('ligandexplorer', 'model')
-        model_1_pkl_file = os.path.join(script_dir, 'model_1.pkl')
-        model_2_pkl_file = os.path.join(script_dir, 'model_2.pkl')
-        scaler_1_file = os.path.join(script_dir, 'scaler_1.pkl')
-        scaler_2_file = os.path.join(script_dir, 'scaler_2.pkl')
-        model_3_pkl_file = os.path.join(script_dir, 'model_3.pkl')
-        scaler_3_file = os.path.join(script_dir, 'scaler_3.pkl')
-        with open(model_1_pkl_file, 'rb') as f_in:
-            ModelContainer.model_1 = pickle.load(f_in)
-        with open(model_2_pkl_file, 'rb') as f_in:
-            ModelContainer.model_2 = pickle.load(f_in)
-        with open(scaler_1_file, 'rb') as f_in:
-            ModelContainer.scaler_1 = pickle.load(f_in)
-        with open(scaler_2_file, 'rb') as f_in:
-            ModelContainer.scaler_2 = pickle.load(f_in)
-        with open(model_3_pkl_file, 'rb') as f_in:
-            ModelContainer.model_3 = pickle.load(f_in)
-        with open(scaler_3_file, 'rb') as f_in:
-            ModelContainer.scaler_3 = pickle.load(f_in)
+        if ModelContainer.backend == 'lgbm':
+            _load_lgbm_models()
+        else:
+            _load_gnn_models()
         ModelContainer.models_loaded = True
-        print('Models loaded successfully')
     os.makedirs(dest_dir, exist_ok= True)
     shutil.move(src_file, os.path.join(dest_dir, os.path.basename(src_file)))
     worker(dest_dir, pdb_name, search_mode, identify_ligand, boxsize, fix_pdb, LGBM_Model_package, debug_mode)
 
+
 class ModelContainer:
+    backend = 'gnn'
+    device_request = 'cpu'
     models_loaded = False
+    # GNN
+    mol_classifier = None
+    ligand_classifier = None
+    device = None
+    # LGBM
     model_1 = None
     scaler_1 = None
     model_2 = None
@@ -176,6 +216,10 @@ class ModelContainer:
     scaler_3 = None
 
 def main():
+    try:
+        multiprocessing.set_start_method('spawn')
+    except RuntimeError:
+        pass
     parser = argparse.ArgumentParser(description='Ligand explorer, version: v0.0.1')
     parser.add_argument('-o','--output_dir', 
                         default= 'output', 
@@ -213,6 +257,14 @@ def main():
                         default= False, type= str2bool,
                         help= 'debug mode. output some debug information. default is False',
                         required= False)
+    parser.add_argument('-m', '--backend',
+                        default='gnn', choices=['gnn', 'lgbm'],
+                        help='Model backend for ligand identification: gnn (default) or lgbm',
+                        required=False)
+    parser.add_argument('-d', '--device',
+                        default='cpu', choices=['cpu', 'cuda'],
+                        help='Device for GNN inference: cpu (default) or cuda',
+                        required=False)
     args = parser.parse_args()
     output_path = args.output_dir
     pdb_zip = args.input_zip
@@ -223,6 +275,8 @@ def main():
     silence_mode = args.silence_mode
     fix_pdb = args.fix_pdb_file
     debug_mode = args.debug
+    ModelContainer.backend = args.backend
+    ModelContainer.device_request = args.device
 
     try:
         from pdbfixer import PDBFixer 
@@ -234,10 +288,10 @@ def main():
     if core == None:
         core = multiprocessing.cpu_count()
     search_mode = 'strict' if strict_mode else 'normal'
-    print(f'Running the workflow in {search_mode} mode with {core} of core')
+    print(f'Running the workflow in {search_mode} mode with {core} of core, backend={ModelContainer.backend}')
     
     if silence_mode:
-        print(f'Running the workflow in {silence_mode} mode')
+        print('Running the workflow in silence mode')
         sys.stdout = open(os.devnull, 'w')
     if output_path is not None:
         if not os.path.exists(output_path):
@@ -264,23 +318,25 @@ def main():
                 ))
 
     print(f"Total tasks to process: {len(tasks)}") 
+    pool = None
     try:
-        with Pool(processes= core) as pool:
-            results = []
-            chunk_size = 1
-            for result in pool.imap_unordered(worker_wrapper, tasks, chunksize= chunk_size):
-                results.append(result)
-    except KeyboardInterrupt:  
-        print("\nInterrupted by user. Terminating workers...")  
-        pool.terminate()  
-    finally:  
-        pool.close()  
-        pool.join()  
+        pool = Pool(processes=core)
+        results = []
+        chunk_size = 1
+        for result in pool.imap_unordered(worker_wrapper, tasks, chunksize=chunk_size):
+            results.append(result)
+    except KeyboardInterrupt:
+        print("\nInterrupted by user. Terminating workers...")
+        if pool is not None:
+            pool.terminate()
+    finally:
+        if pool is not None:
+            pool.close()
+            pool.join()
     # import time
     # print(time.time())
     print('====== ALL JOB DONE ======')
 
 if __name__ == '__main__':
-    multiprocessing.set_start_method('spawn')
     main()
 

@@ -27,13 +27,13 @@ def check_covalent(res_name, cha_id, res_id, str_graph= None):
     
     covalent_stat = False
     covalent_residue = ""
-    interaction = [[],[]]
+    interaction = [[], []]
 
-    if covalent_node != "":
+    if covalent_node:
         covalent_res = []
         for cov_node in covalent_node:
             if nx.has_path(graph, check_node, cov_node):
-                interaction = (check_node, cov_node)
+                interaction = [check_node, cov_node]
                 covalent_res.append(cov_node)
                 print('covalent interaction:',check_node, cov_node)
                 covalent_stat = True
@@ -48,8 +48,7 @@ def check_covalent(res_name, cha_id, res_id, str_graph= None):
         else:
             covalent_stat = True
             covalent_residue = []
-            interaction[1] = []
-            return (covalent_stat, covalent_residue, interaction[1])
+            return (covalent_stat, covalent_residue, [])
     else:
         return (covalent_stat, [], [])
 
