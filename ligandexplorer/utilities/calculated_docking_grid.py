@@ -1,7 +1,5 @@
 import os
 import json
-from Bio.PDB import *
-from Bio.PDB import PDBParser
 from ligandexplorer.utilities.formating import get_parser
 
 import warnings

@@ -1,6 +1,4 @@
 import os
-from Bio import PDB
-from Bio.PDB import PDBParser, MMCIFParser
 from Bio.PDB import NeighborSearch
 import networkx as nx
 from ligandexplorer.utilities.save_ligand import save_ligand
@@ -8,9 +6,6 @@ from ligandexplorer.utilities.formating import get_parser
 
 def non_covalent_workflow(init_pdb, work_path, debug):
     input_pdb = os.path.join(work_path, init_pdb)
-    ext = '.cif' if init_pdb.endswith('.cif') or init_pdb.endswith('.mmcif') else '.pdb'
-    new_pdb = os.path.join(work_path, 'protein' + ext)
-
     parser = get_parser(input_pdb, QUIET=True)
     structure = parser.get_structure('str', input_pdb)
     graph = nx.Graph()

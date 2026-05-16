@@ -4,20 +4,25 @@
 
 ---
 
-## V2.0 Update
+## V2.1 Update
 
 ### Graph Neural Network (GNN) Backend
 
-V2.0 introduces a new GNN-based classification backend, replacing the previous LightGBM models as the default. The GNN models learn molecular features end-to-end directly from raw atomic properties (atomic number, 3D coordinates, residue boundaries), eliminating the need for hand-crafted features.
+V2.0 introduces a new GNN-based classification backend, replacing the previous LightGBM models as the default. The system uses a two-stage architecture combining a SchNet-style GNN with chemical rule guardrails and a specialized peptide sub-classifier for high-precision molecule typing.
 
-**Two GNN models are included:**
+**Three GNN/ML models work together:**
 
-- **Molecule Classifier :** 8-class classification — peptide, glycan, RNA, DNA, lipid, ion, organic, and **cyclic peptide** (new). Built on a SchNet. Test accuracy: **99.66%**.
-- **Ligand Relevance Classifier :** Binary classification — determines whether a molecule is a biologically relevant ligand. Uses pocket-aware graph construction and dual-channel (ligand + protein) pooling. Test accuracy: **97.61%**, AUC: **99.41%**.
+- **Molecule Classifier (Stage 1):** 8-class GNN classification — peptide, peptide-like, glycan, RNA, DNA, lipid, organic, and cyclic peptide. Uses atomic graph features (atomic number, covalent degree, ring membership), 32-dimensional bond-order-derived functional group descriptors, and explicit peptide backbone topology tracing. Combined with chemical rule constraints (e.g., molecules with zero amide bonds cannot be peptide classes). Test accuracy: **99.997%**.
+- **Peptide Sub-Classifier (Stage 2):** 3-class MLP refinement — when Stage 1 predicts a peptide-group class, this lightweight sub-model distinguishes peptide vs. peptide-like vs. cyclic peptide using hand-crafted backbone topology features (N/C terminus detection, backbone cyclicity, amide distribution). Test accuracy: **99.59%**.
+- **Ligand Relevance Classifier:** Binary classification — determines whether a molecule is a biologically relevant ligand. Uses pocket-aware graph construction and dual-channel (ligand + protein) pooling. Test accuracy: **97.61%**, AUC: **99.41%**.
 
-### Cyclic Peptide Support
+**Additionally, ions are detected by a rule-based pre-filter** using graph isomorphism matching against a registry of known ion topologies, bypassing the neural network entirely.
 
-V2.0 adds **cyclic peptide** as a new molecular category. Cyclic peptides are now correctly identified and classified rather than being grouped with linear peptides.
+### Peptide-Like And Cyclic Peptide Support
+
+V2.0 adds **peptide-like** molecules as a separate category for peptidomimetics such as beta/gamma peptides, peptoids, depsipeptides, and urea peptidomimetics. The **cyclic peptide** category covers covalently cyclized peptide or peptide-like molecules, including head-to-tail, disulfide-like, side-chain lactam-like, stapled-like, cyclic depsipeptide, and cyclic peptoid structures.
+
+> **Note:** The peptide-like and cyclic peptide categories are only available under the GNN backend. The legacy LightGBM backend supports 7-class classification only (peptide, glycan, RNA, DNA, lipid, ion, organic) and does not distinguish peptide-like or cyclic peptide.
 
 ### Backend Selection
 
@@ -33,13 +38,13 @@ ligandexplorer -i input.zip -o output/ --backend lgbm
 
 ### GPU Acceleration
 
-When using the GNN backend, GPU acceleration is available via the `--device` flag:
+When using the GNN backend, GPU acceleration is available via the `--device` flag. In CUDA mode, all three models are loaded into GPU memory once and served by a dedicated inference daemon process, while multiple CPU worker processes handle graph construction and dispatch inference requests concurrently. Memory is managed proactively to prevent leaks.
 
 ```bash
 # Run on CPU (default)
 ligandexplorer -i input.zip -o output/
 
-# Run on GPU
+# Run on GPU (models resident on GPU, ~12 MB VRAM)
 ligandexplorer -i input.zip -o output/ --device cuda
 ```
 
@@ -56,7 +61,7 @@ pip install torch torch_geometric
 # Core Feature
 
 - **Automated Ligand Extraction:** Automatically identifies and extracts ligands from PDB files.
-- **Intelligent Classification:** Uses GNN models to accurately classify molecules into ions, solvents, nucleic acids, peptides, cyclic peptides, or biologically active ligands.
+- **Intelligent Classification:** Uses a two-stage GNN pipeline with chemical rule constraints to classify molecules into ions, glycans, nucleic acids (RNA/DNA), lipids, peptides, peptide-like molecules, cyclic peptides, or organic ligands.
 - **Graph Theory Application:** Distinguishes between covalent and non-covalent ligands based on molecular connectivity using graph theory algorithms.
 - **High-Throughput Processing:** Supports multi-core parallel processing for rapid handling of large PDB datasets.
 - **Flexible Customization:** Offers various command-line options for users to tailor the workflow to their specific needs.
@@ -119,7 +124,7 @@ usage: ligandexplorer [-h] -o OUTPUT_DIR -i INPUT_ZIP [-f FIX_PDB_FILE] [-b BOX_
                       [-s STRICT_MODE] [-l LIG_IDENTIFY] [-e SILENCE_MODE] [-t DEBUG]
                       [-m {gnn,lgbm}] [-d {cpu,cuda}]
 
-Ligand explorer, version: v2.0
+Ligand explorer, version: v2.1
 
 options:
   -h, --help            show this help message and exit

@@ -71,11 +71,10 @@ def format_pdb_file(work_path=None, input_file=None, fix_pdb= False, debug= Fals
     else:
         first_model = structure[0]
     
-    print(f"DEBUG: Saving format file to {format_pdb}")
     try:
         save_structure(first_model, format_pdb, select=AtomSelecter(keep_water= False))
     except Exception as e:
-        print(f"DEBUG: Failed to save format file {format_pdb}: {e}")
+        pass  # silently handle save failure
 
     # save_structure(first_model, format_pdb, select=AtomSelecter(keep_water= False))
     # if os.path.exists(format_pdb):
@@ -86,12 +85,12 @@ def format_pdb_file(work_path=None, input_file=None, fix_pdb= False, debug= Fals
     try:
         save_structure(first_model, water_pdb, select=AtomSelecter(keep_water= True))
     except Exception as e:
-         print(f"DEBUG: Failed to save water file {water_pdb}: {e}")
+         pass  # silently handle save failure
          
     if os.path.exists(format_pdb):
         shutil.move(format_pdb, input_full_path)
     else:
-        print(f"DEBUG: format_pdb {format_pdb} not created, cannot move to {input_full_path}")        
+        pass  # format_pdb not created
     
     # try:
     #     structure = parser.get_structure('structure', input_pdb)

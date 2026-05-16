@@ -1,6 +1,6 @@
 import os
 import shutil
-from Bio.PDB import PDBParser, PDBIO, NeighborSearch, Selection
+from Bio.PDB import NeighborSearch, Selection
 from Bio.PDB.PDBIO import Select
 from ligandexplorer.utilities.formating import get_parser, save_structure
 

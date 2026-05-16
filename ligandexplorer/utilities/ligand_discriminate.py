@@ -3,8 +3,6 @@ import copy
 import numpy as np
 import networkx as nx
 from collections import Counter
-from Bio.PDB import *
-from Bio.PDB import PDBParser, NeighborSearch
 from Bio.PDB.Superimposer import Superimposer
 from ligandexplorer.utilities.calculated_docking_grid import calculated_docking_grid
 def _get_predict_functions():
@@ -66,14 +64,6 @@ def generated_graph(structure):
                 pass
     return graph
 
-def is_subgraph_similar(G1, G2_list):
-    for G2 in G2_list:
-        for sub_graph_nodes in nx.connected_components(G2):
-            sub_graph = G2.subgraph(sub_graph_nodes)
-            if are_graphs_similar(G1, sub_graph):
-                return True
-    return False
-
 def node_match(node1, node2):
     return node1['element'] == node2['element']
 
@@ -104,9 +94,6 @@ def get_rmsd(str1, str2):
     str1_atoms = {element: sum(1 for atom in atoms1 if atom.element == element) for element in elements}
     str2_atoms = {element: sum(1 for atom in atoms2 if atom.element == element) for element in elements}
     if all(str1_atoms[elem] == str2_atoms[elem] for elem in elements):
-        coords1 = [atom.get_coord() for atom in atoms1]
-        coords2 = [atom.get_coord() for atom in atoms2]
-        
         super_imposer = Superimposer()
         super_imposer.set_atoms(atoms1, atoms2) 
         super_imposer.apply(str2.get_atoms())
@@ -137,9 +124,9 @@ def clean_alt_structure(structure):
 
 def ligand_identify(work_path=None, input_pdb= None, search_mode= None, LGBM_Model_package= None, add_size= None):
     '''
-    GNN 8-class:
-      0: peptide, 1: gly, 2: rna, 3: dna, 4: mem,
-      5: ions, 6: organic, 7: cyclic_peptide
+    GNN 8-class + ions pre-rule:
+      Model classes: peptide, peptide_like, gly, rna, dna, mem, organic, cyclic_peptide
+      ions: detected by graph isomorphism pre-classification (not GNN)
     '''
     ext = '.cif' if input_pdb.endswith('.cif') or input_pdb.endswith('.mmcif') else '.pdb'
     other_pdb_file = [ input_pdb, 'protein' + ext, 'water' + ext, 'fix' + ext]
@@ -203,6 +190,15 @@ def ligand_identify(work_path=None, input_pdb= None, search_mode= None, LGBM_Mod
             else:
                 new_f = os.path.join(work_path, 'Ligand_peptide_' + ligand)
                 print(f">>> {ligand} is peptide, it is a ligand")
+            os.rename(ligand_file, new_f)
+
+        elif mol_classfication == 'peptide_like':
+            if ligand_classfication == 0:
+                new_f = os.path.join(work_path, 'Other_peptide_like_' + ligand)
+                print(f">>> {ligand} is peptide-like, it is not a ligand")
+            else:
+                new_f = os.path.join(work_path, 'Ligand_peptide_like_' + ligand)
+                print(f">>> {ligand} is peptide-like, it is a ligand")
             os.rename(ligand_file, new_f)
 
         elif mol_classfication == 'rna':

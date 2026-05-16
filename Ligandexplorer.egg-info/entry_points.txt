@@ -1,2 +1,0 @@
-[console_scripts]
-ligandexplorer = ligandexplorer.workflow:main

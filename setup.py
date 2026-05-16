@@ -11,7 +11,7 @@ def wrapped_setup(scm=None):
         author_email='liyq@dp.tech',
         description=('Find ligand from strcuture and structured data'),
         license='MIT',
-        install_requires=['setuptools_scm',
+        install_requires=[
                           'rarfile',
                           'networkx',
                           'biopython',
@@ -19,10 +19,15 @@ def wrapped_setup(scm=None):
                           'torch',
                           'torch_geometric',
                           'scipy',
-#                          'pdbfixer',
                           ],
         extras_require={
-            'lgbm': ['lightGBM', 'scikit-learn>=1.5'],
+            'lgbm': [
+                'lightGBM',
+                'scikit-learn>=1.5',
+                'rdkit>=2024.3',
+                'pandas',
+                'joblib',
+            ],
         },
         packages=find_packages(),
         package_data={'ligandexplorer': ["model/*"]},
@@ -39,4 +44,3 @@ try:
 except Exception as e:
     print(e)
     wrapped_setup(scm=None)
-

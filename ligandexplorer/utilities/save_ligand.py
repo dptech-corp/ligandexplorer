@@ -1,5 +1,5 @@
 import os
-from Bio.PDB import PDBParser, PDBIO, Select
+from Bio.PDB import Select
 from ligandexplorer.utilities.formating import get_parser, save_structure
 
 class ResidueSelect(Select):

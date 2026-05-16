@@ -1,9 +1,8 @@
 try:
-    from pdbfixer import PDBFixer 
+    from pdbfixer import PDBFixer
     from openmm.app import PDBFile, PDBxFile
-    import argparse
     pdbfixer_stat = True
-except:
+except ImportError:
     pdbfixer_stat = False
 
 def fix_pdb_structure(input_file, output_file):
