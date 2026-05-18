@@ -246,7 +246,7 @@ def _gpu_inference_loop(request_queue, response_queue):
         msg = request_queue.get()
         if msg is None:
             break
-        req_id, task_type, payload = msg
+        req_id, task_type, payload, reply_queue = msg
         try:
             z = torch.tensor(payload['z'], dtype=torch.long, device=device)
             pos = torch.tensor(payload['pos'], dtype=torch.float, device=device)
@@ -276,23 +276,23 @@ def _gpu_inference_loop(request_queue, response_queue):
                     pred_label = _run_sub_model(
                         sub_model, norm_mean, norm_std,
                         func_groups, elem_ratios, amide_count, is_cyclic, device)
-                response_queue.put((req_id, pred_label))
+                reply_queue.put((req_id, pred_label))
 
             elif task_type == 'ligand':
                 if lig_model is None:
-                    response_queue.put((req_id, 0))
+                    reply_queue.put((req_id, 0))
                 else:
                     data.node_type = torch.tensor(payload['node_type'], dtype=torch.long, device=device)
                     data.ligand_mask = torch.tensor(payload['ligand_mask'], dtype=torch.bool, device=device)
                     with torch.no_grad():
                         pred = lig_model(data).argmax(-1).item()
-                    response_queue.put((req_id, pred))
+                    reply_queue.put((req_id, pred))
             else:
-                response_queue.put((req_id, None))
+                reply_queue.put((req_id, None))
 
         except Exception as e:
             print(f'GPU inference error: {e}')
-            response_queue.put((req_id, "organic" if task_type == 'mol' else 0))
+            reply_queue.put((req_id, "organic" if task_type == 'mol' else 0))
         finally:
             # Release intermediate tensors immediately
             del data, z, pos, edge_index, edge_attr, batch
@@ -375,6 +375,7 @@ def _init_worker(backend, device_request, req_q, resp_q):
         ModelContainer.device = 'cuda_proxy'
         ModelContainer.request_queue = req_q
         ModelContainer.response_queue = resp_q
+        ModelContainer.worker_reply_queue = multiprocessing.Queue()
     elif backend == 'gnn':
         if not ModelContainer.models_loaded:
             _load_gnn_models_cpu()
@@ -404,7 +405,8 @@ class ModelContainer:
     device = None
     # CUDA proxy
     request_queue = None
-    response_queue = None
+    response_queue = None  # kept for backward compat, unused in fixed path
+    worker_reply_queue = None
     # LGBM
     model_1 = None
     scaler_1 = None

@@ -43,7 +43,7 @@ def check_covalent(res_name, cha_id, res_id, str_graph= None):
             graph.remove_node(cov_res)
             
         covalent_residue = set(nx.bfs_tree(graph, source=interaction[0], reverse=True, depth_limit=None).nodes)
-        if len(covalent_residue) < 12:
+        if len(covalent_residue) < 15:
             return (covalent_stat, covalent_residue, interaction[1])
         else:
             covalent_stat = True
@@ -55,7 +55,7 @@ def check_covalent(res_name, cha_id, res_id, str_graph= None):
 def find_covalent_ligand(input_pdb, work_path, str_graph= None):
     initial_graph = copy.deepcopy(str_graph)
     covalent_nodes = []
-    covalent_limit = 12
+    covalent_limit = 15
     standard_residue = [ "ALA", "ARG", "ASN", "ASP", "CYS", "CYX", "GLN", "GLU", "GLY", "HIS", 
                         "HID", "HIE", "HIP", "ILE", "LEU", "LYS", "MET", "PHE", "PRO", "SER", 
                         "THR", "TRP", "TYR", "VAL"]

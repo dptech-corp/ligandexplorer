@@ -1,6 +1,5 @@
 import os
 import shutil
-from Bio.PDB import NeighborSearch, Selection
 from Bio.PDB.PDBIO import Select
 from ligandexplorer.utilities.formating import get_parser, save_structure
 
@@ -19,24 +18,20 @@ def save_protein_without_ligand(work_path=None, protein_pdb=None, init_pdb=None)
     
     parser = get_parser(input_protein, QUIET=True)
     structure = parser.get_structure('protein', input_protein)
-    protein_atoms = Selection.unfold_entities(structure, 'A')  
-    ns = NeighborSearch(protein_atoms)
 
-    residues_to_remove = set()
+    ligand_residue_ids = set()
     for ligand_file in ligands_file:
         ligand_path = os.path.join(work_path, ligand_file)
         ligand_structure = parser.get_structure('ligand', ligand_path)
-        ligand_atoms = Selection.unfold_entities(ligand_structure, 'A')
-
-        for atom in ligand_atoms:
-            close_atoms = ns.search(atom.coord, 0.2, 'A')  # 0.2 埃范围内
-            for close_atom in close_atoms:
-                residue = close_atom.get_parent()
-                residues_to_remove.add(residue)
+        for model in ligand_structure:
+            for chain in model:
+                for residue in chain:
+                    ligand_residue_ids.add((chain.get_id(), residue.id))
 
     class RemoveResiduesSelect(Select):
         def accept_residue(self, residue):
-            if residue in residues_to_remove:
+            chain_id = residue.get_parent().get_id()
+            if (chain_id, residue.id) in ligand_residue_ids:
                 return False
             return True
 

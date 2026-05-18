@@ -11,7 +11,7 @@ warnings.simplefilter('ignore',BiopythonWarning)
 def calculated_docking_grid(work_path, ligand_file, add_size= 10):
     # input file was PDB
     input_path = os.path.join(work_path, ligand_file)
-    output_grid = os.path.join(work_path, ligand_file.split('.')[0] + '.json')
+    output_grid = os.path.join(work_path, os.path.splitext(ligand_file)[0] + '.json')
     
     parser = get_parser(input_path, QUIET= True)
     structure = parser.get_structure('mol', input_path)

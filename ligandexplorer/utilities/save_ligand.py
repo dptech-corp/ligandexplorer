@@ -1,6 +1,7 @@
 import os
 from Bio.PDB import Select
 from ligandexplorer.utilities.formating import get_parser, save_structure
+from ligandexplorer.utilities.ligand_discriminate import clean_alt_structure
 
 class ResidueSelect(Select):
     def __init__(self, selected_residues):
@@ -22,19 +23,16 @@ class ResidueSelect(Select):
 def parser_residue_info(residue_info_list):
     selected_residues = set()
     for info in residue_info_list:
-        parts = info.split('_')
+        parts = info.rsplit('_', 2)
         if len(parts) != 3:
             continue
         res_name, chain_id, res_id_str = parts
-        
-        # Keep res_id_str as string to handle insertion codes
-        
         selected_residues.add((chain_id, res_id_str, res_name))
     return selected_residues
 
 def save_ligand(input_pdb, subgraph, work_path):
     parser = get_parser(input_pdb, QUIET= True)
-    structure = parser.get_structure('structure', input_pdb)
+    structure = clean_alt_structure(parser.get_structure('structure', input_pdb))
     residue_info = list(subgraph.nodes())
     selected_residues = parser_residue_info(residue_info)
     first_res = residue_info[0]
@@ -52,7 +50,7 @@ def save_ligand(input_pdb, subgraph, work_path):
 
 def save_ligand_covalent(input_pdb, subgraph, work_path):
     parser = get_parser(input_pdb, QUIET= True)
-    structure = parser.get_structure('structure', input_pdb)
+    structure = clean_alt_structure(parser.get_structure('structure', input_pdb))
     residue_info = list(subgraph.nodes())
     selected_residues = parser_residue_info(residue_info)
     first_res = residue_info[0]

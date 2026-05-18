@@ -28,24 +28,30 @@ def non_covalent_workflow(init_pdb, work_path, debug):
                 node_id = f"{residue_name}_{chain_id}_{residue_id}"
                 graph.add_node(node_id)
     
+    COVALENT_RADII = {
+        "C": 0.76, "N": 0.71, "O": 0.66, "S": 1.05, "P": 1.07,
+        "F": 0.57, "CL": 1.02, "BR": 1.20, "I": 1.39, "SE": 1.20,
+        "B": 0.84, "SI": 1.11, "NA": 1.66, "MG": 1.41, "ZN": 1.22,
+        "FE": 1.24, "CA": 1.76, "MN": 1.39, "CO": 1.26, "CU": 1.32,
+        "NI": 1.24, "K": 2.03,
+    }
+    TOLERANCE = 0.45
+
     distance_thresholds = {
-        ( "C", "C"): 1.84,
-        ( "C", "N"): 1.76,
-        ( "N", "C"): 1.76,
-        ( "C", "O"): 1.72,
-        ( "O", "C"): 1.72,
-        ( "C", "S"): 2.10,
-        ( "S", "C"): 2.10,
-        ( "O", "P"): 1.95,
-        ( "P", "O"): 1.95,
-        ( "C", "CL"): 1.90,
-        ( "CL", "C"): 1.90,
-        ( "C", "BR"): 2.10,
-        ( "BR", "C"): 2.10,
-        ( "C", "I"): 2.30,
-        ( "I", "C"): 2.30,
-        ( "NA", "C"): 2.30,
-        ( "C", "NA"): 2.30
+        ("C", "C"): 1.84, ("C", "N"): 1.76, ("N", "C"): 1.76,
+        ("C", "O"): 1.72, ("O", "C"): 1.72, ("C", "S"): 2.10,
+        ("S", "C"): 2.10, ("O", "P"): 1.95, ("P", "O"): 1.95,
+        ("C", "P"): 2.24, ("P", "C"): 2.24, ("P", "N"): 1.95,
+        ("N", "P"): 1.95, ("P", "S"): 2.20, ("S", "P"): 2.20,
+        ("C", "F"): 1.60, ("F", "C"): 1.60,
+        ("C", "CL"): 1.90, ("CL", "C"): 1.90,
+        ("C", "BR"): 2.10, ("BR", "C"): 2.10,
+        ("C", "I"): 2.30, ("I", "C"): 2.30,
+        ("N", "N"): 1.70, ("N", "O"): 1.65, ("O", "N"): 1.65,
+        ("S", "S"): 2.40, ("S", "O"): 1.80, ("O", "S"): 1.80,
+        ("S", "N"): 1.90, ("N", "S"): 1.90,
+        ("C", "SE"): 2.10, ("SE", "C"): 2.10,
+        ("NA", "C"): 2.30, ("C", "NA"): 2.30,
     }
 
     atoms = [ atom for atom in structure.get_atoms() if atom.element != 'H' ]
@@ -88,14 +94,18 @@ def non_covalent_workflow(init_pdb, work_path, debug):
             if (atom1_element, atom2_element) in distance_thresholds:
                 distance_limit = distance_thresholds[(atom1_element, atom2_element)]
                 if atom1 - atom2 <= distance_limit:
-                    graph.add_edge(node1_id,node2_id) 
-            elif atom1 - atom2 <= 1.5:
-                graph.add_edge(node1_id,node2_id) 
+                    graph.add_edge(node1_id, node2_id)
             else:
-                pass
+                r1 = COVALENT_RADII.get(atom1_element, 0.0)
+                r2 = COVALENT_RADII.get(atom2_element, 0.0)
+                if r1 > 0 and r2 > 0:
+                    if atom1 - atom2 <= r1 + r2 + TOLERANCE:
+                        graph.add_edge(node1_id, node2_id)
+                elif atom1 - atom2 <= 1.5:
+                    graph.add_edge(node1_id, node2_id)
     
     connected_subgraphs = [ graph.subgraph(c).copy() for c in nx.connected_components(graph) ]
-    small_subgraphs = [subgraph for subgraph in connected_subgraphs if subgraph.number_of_nodes() < 15]
+    small_subgraphs = [subgraph for subgraph in connected_subgraphs if subgraph.number_of_nodes() <= 15]
     final_graph = graph.copy()
     if not small_subgraphs:
         print(f'No non-covalent ligand in {input_pdb}')

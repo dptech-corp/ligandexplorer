@@ -52,6 +52,9 @@ def parse_pdb(pdb_path):
         for line in f:
             if not (line.startswith("ATOM") or line.startswith("HETATM")):
                 continue
+            altloc = line[16] if len(line) > 16 else " "
+            if altloc not in (" ", "", "A"):
+                continue
             elem = line[76:78].strip().upper() if len(line) >= 78 else ""
             if not elem:
                 raw = line[12:16].strip()
@@ -107,6 +110,9 @@ def parse_pdb_with_conect(pdb_path):
                         conect.add(tuple(sorted((src, dst))))
                 continue
             if not (line.startswith("ATOM") or line.startswith("HETATM")):
+                continue
+            altloc = line[16] if len(line) > 16 else " "
+            if altloc not in (" ", "", "A"):
                 continue
             elem = line[76:78].strip().upper() if len(line) >= 78 else ""
             if not elem:

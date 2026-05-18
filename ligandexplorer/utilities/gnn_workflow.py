@@ -111,8 +111,9 @@ def _proxy_predict(task_type, payload):
     """Send prediction request to GPU daemon and wait for response."""
     from ligandexplorer.workflow import ModelContainer
     req_id = str(uuid.uuid4())
-    ModelContainer.request_queue.put((req_id, task_type, payload))
-    resp_id, result = ModelContainer.response_queue.get()
+    reply_q = ModelContainer.worker_reply_queue
+    ModelContainer.request_queue.put((req_id, task_type, payload, reply_q))
+    resp_id, result = reply_q.get(timeout=120)
     assert resp_id == req_id, f"Response ID mismatch: {resp_id} != {req_id}"
     return result
 
@@ -129,6 +130,7 @@ def load_model_and_pred(input_pdb, LGBM_Model_package=None):
 
         graph = structure_to_graph(input_pdb)
         if graph is None or graph.z.size(0) == 0:
+            print(f"[WARNING] Failed to build graph for {input_pdb}, defaulting to organic")
             return "organic"
 
         n_atoms = graph.z.size(0)
@@ -174,7 +176,7 @@ def load_model_and_pred(input_pdb, LGBM_Model_package=None):
             torch.cuda.empty_cache()
         return pred_label
     except Exception as e:
-        print(f"GNN mol prediction error: {e}")
+        print(f"[WARNING] GNN mol prediction error for {input_pdb}: {e}")
         return "organic"
 
 
