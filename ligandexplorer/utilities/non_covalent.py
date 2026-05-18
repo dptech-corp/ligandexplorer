@@ -55,6 +55,8 @@ def non_covalent_workflow(init_pdb, work_path, debug):
     }
 
     atoms = [ atom for atom in structure.get_atoms() if atom.element != 'H' ]
+    if not atoms:
+        return graph.copy(), False
     search = NeighborSearch(atoms)
     bonds = search.search_all(2.6)
     

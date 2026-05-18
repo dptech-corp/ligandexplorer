@@ -1,7 +1,6 @@
 import os
 from Bio.PDB import Select
 from ligandexplorer.utilities.formating import get_parser, save_structure
-from ligandexplorer.utilities.ligand_discriminate import clean_alt_structure
 
 class ResidueSelect(Select):
     def __init__(self, selected_residues):
@@ -32,7 +31,7 @@ def parser_residue_info(residue_info_list):
 
 def save_ligand(input_pdb, subgraph, work_path):
     parser = get_parser(input_pdb, QUIET= True)
-    structure = clean_alt_structure(parser.get_structure('structure', input_pdb))
+    structure = parser.get_structure('structure', input_pdb)
     residue_info = list(subgraph.nodes())
     selected_residues = parser_residue_info(residue_info)
     first_res = residue_info[0]
@@ -50,7 +49,7 @@ def save_ligand(input_pdb, subgraph, work_path):
 
 def save_ligand_covalent(input_pdb, subgraph, work_path):
     parser = get_parser(input_pdb, QUIET= True)
-    structure = clean_alt_structure(parser.get_structure('structure', input_pdb))
+    structure = parser.get_structure('structure', input_pdb)
     residue_info = list(subgraph.nodes())
     selected_residues = parser_residue_info(residue_info)
     first_res = residue_info[0]
