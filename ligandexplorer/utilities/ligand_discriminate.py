@@ -105,21 +105,33 @@ def compare_element_distributions(dist1, dist2):
     return all(dist1[element] == dist2[element] for element in set(dist1) | set(dist2))  
 
 def clean_alt_structure(structure):
+    from Bio.PDB.Atom import DisorderedAtom
     cleaned_structure = copy.deepcopy(structure)
     for model in cleaned_structure:
         for chain in model:
             for residue in chain:
                 atoms_to_remove = []
                 for atom in residue:
-                    alt_loc = atom.get_altloc()
-                    if alt_loc != ' ' and alt_loc != 'A':
-                        atoms_to_remove.append(atom.get_id())
-                
+                    if isinstance(atom, DisorderedAtom):
+                        alt_ids = atom.disordered_get_id_list()
+                        if 'A' in alt_ids:
+                            atom.disordered_select('A')
+                        elif ' ' in alt_ids:
+                            atom.disordered_select(' ')
+                    else:
+                        alt_loc = atom.get_altloc()
+                        if alt_loc != ' ' and alt_loc != 'A':
+                            atoms_to_remove.append(atom.get_id())
+
                 for atom_id in atoms_to_remove:
                     residue.detach_child(atom_id)
-                
+
                 for atom in residue:
-                    atom.set_altloc(' ')
+                    if isinstance(atom, DisorderedAtom):
+                        selected = atom.selected_child
+                        selected.set_altloc(' ')
+                    else:
+                        atom.set_altloc(' ')
     return cleaned_structure
 
 def ligand_identify(work_path=None, input_pdb= None, search_mode= None, LGBM_Model_package= None, add_size= None):

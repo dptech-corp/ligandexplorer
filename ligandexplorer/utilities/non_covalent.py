@@ -3,11 +3,13 @@ from Bio.PDB import NeighborSearch
 import networkx as nx
 from ligandexplorer.utilities.save_ligand import save_ligand
 from ligandexplorer.utilities.formating import get_parser
+from ligandexplorer.utilities.ligand_discriminate import clean_alt_structure
 
 def non_covalent_workflow(init_pdb, work_path, debug):
     input_pdb = os.path.join(work_path, init_pdb)
     parser = get_parser(input_pdb, QUIET=True)
     structure = parser.get_structure('str', input_pdb)
+    structure = clean_alt_structure(structure)
     graph = nx.Graph()
     for model in structure:
         for chain in model:
