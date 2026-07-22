@@ -10,6 +10,7 @@ Short-range spatial graph (cutoff=3.0 A) + inferred covalent bonds.
 """
 import numpy as np
 import torch
+from Bio.PDB import MMCIFParser, PDBParser
 from scipy.spatial import cKDTree
 from torch_geometric.data import Data
 
@@ -43,57 +44,88 @@ MAX_DEGREE = 6
 MAX_RING_COUNT = 8
 
 
+def _get_structure_parser(structure_path):
+    """Select a Biopython parser from the structure file extension."""
+    if structure_path.lower().endswith((".cif", ".mmcif")):
+        return MMCIFParser(QUIET=True)
+    return PDBParser(QUIET=True)
+
+
+def _iter_structure_atoms(structure_path):
+    """Yield atoms from the first model, using Biopython for PDB/mmCIF."""
+    parser = _get_structure_parser(structure_path)
+    structure = parser.get_structure("structure", structure_path)
+    model = next(structure.get_models())
+
+    for atom in model.get_atoms():
+        # Biopython normally selects one conformer, but keep this guard for
+        # explicitly disordered atoms.
+        altloc = atom.get_altloc()
+        if altloc not in (" ", "", "A"):
+            continue
+
+        element = (atom.element or "").strip().upper()
+        if not element:
+            element = atom.get_name().strip().lstrip("0123456789")
+            element = element.rstrip("'\"").upper()
+        if element == "H" or (
+                element.startswith("H")
+                and len(element) <= 2
+                and element not in ELEMENT_TO_Z):
+            continue
+
+        atomic_number = ELEMENT_TO_Z.get(element, 0)
+        if atomic_number == 0:
+            continue
+
+        coord = np.asarray(atom.get_coord(), dtype=np.float64)
+        if coord.shape != (3,) or not np.isfinite(coord).all():
+            continue
+
+        residue = atom.get_parent()
+        chain = residue.get_parent()
+        yield atom, atomic_number, coord, (chain.id, residue.id)
+
+
 def parse_pdb(pdb_path):
-    """Parse PDB, return list of (atomic_number, x, y, z, residue_idx). Skip H."""
+    """Parse PDB/mmCIF with Biopython.
+
+    Return (atomic_number, x, y, z, residue_idx) tuples and skip hydrogens.
+    The historical function name is retained for compatibility.
+    """
     atoms = []
     resid_map = {}
     resid_counter = 0
-    with open(pdb_path) as f:
-        for line in f:
-            if not (line.startswith("ATOM") or line.startswith("HETATM")):
-                continue
-            altloc = line[16] if len(line) > 16 else " "
-            if altloc not in (" ", "", "A"):
-                continue
-            elem = line[76:78].strip().upper() if len(line) >= 78 else ""
-            if not elem:
-                raw = line[12:16].strip()
-                elem = raw.lstrip("0123456789").rstrip("0123456789'\"").upper()
-                if not elem:
-                    continue
-            if elem == "H" or elem.startswith("H") and len(elem) <= 2 and elem not in ELEMENT_TO_Z:
-                continue
-            if elem == "H":
-                continue
-            z = ELEMENT_TO_Z.get(elem, 0)
-            if z == 0:
-                continue
-            try:
-                x = float(line[30:38])
-                y = float(line[38:46])
-                z_coord = float(line[46:54])
-            except (ValueError, IndexError):
-                continue
-            chain = line[21] if len(line) > 21 else " "
-            resname = line[17:20].strip() if len(line) > 20 else ""
-            resseq = line[22:26].strip() if len(line) > 26 else "0"
-            icode = line[26] if len(line) > 26 else " "
-            res_key = (chain, resname, resseq, icode)
-            if res_key not in resid_map:
-                resid_map[res_key] = resid_counter
-                resid_counter += 1
-            atoms.append((z, x, y, z_coord, resid_map[res_key]))
+    for _atom, atomic_number, coord, residue_key in _iter_structure_atoms(pdb_path):
+        if residue_key not in resid_map:
+            resid_map[residue_key] = resid_counter
+            resid_counter += 1
+        atoms.append((
+            atomic_number, coord[0], coord[1], coord[2],
+            resid_map[residue_key]))
     return atoms
 
 
 def parse_pdb_with_conect(pdb_path):
-    """Parse PDB atoms and CONECT records."""
+    """Parse PDB/mmCIF atoms with Biopython and PDB CONECT records."""
     atoms = []
     conect = set()
     kept_serials = set()
-    with open(pdb_path) as f:
-        for line in f:
-            if line.startswith("CONECT"):
+    for atom, atomic_number, coord, _residue_key in _iter_structure_atoms(pdb_path):
+        serial = atom.get_serial_number()
+        if serial is None:
+            continue
+        kept_serials.add(serial)
+        atoms.append((atomic_number, coord[0], coord[1], coord[2], serial))
+
+    # Biopython parses atom records but does not expose PDB CONECT records
+    # through the generic Structure API, so retain the small legacy reader for
+    # connectivity metadata used by the ion registry.
+    if not pdb_path.lower().endswith((".cif", ".mmcif")):
+        with open(pdb_path) as f:
+            for line in f:
+                if not line.startswith("CONECT"):
+                    continue
                 try:
                     src = int(line[6:11])
                 except ValueError:
@@ -108,32 +140,6 @@ def parse_pdb_with_conect(pdb_path):
                         continue
                     if src != dst:
                         conect.add(tuple(sorted((src, dst))))
-                continue
-            if not (line.startswith("ATOM") or line.startswith("HETATM")):
-                continue
-            altloc = line[16] if len(line) > 16 else " "
-            if altloc not in (" ", "", "A"):
-                continue
-            elem = line[76:78].strip().upper() if len(line) >= 78 else ""
-            if not elem:
-                raw = line[12:16].strip()
-                elem = raw.lstrip("0123456789").rstrip("0123456789'\"").upper()
-                if not elem:
-                    continue
-            if elem == "H" or elem.startswith("H") and len(elem) <= 2 and elem not in ELEMENT_TO_Z:
-                continue
-            z = ELEMENT_TO_Z.get(elem, 0)
-            if z == 0:
-                continue
-            try:
-                serial = int(line[6:11])
-                x = float(line[30:38])
-                y = float(line[38:46])
-                z_coord = float(line[46:54])
-            except (ValueError, IndexError):
-                continue
-            kept_serials.add(serial)
-            atoms.append((z, x, y, z_coord, serial))
     conect = {edge for edge in conect if edge[0] in kept_serials and edge[1] in kept_serials}
     return atoms, conect
 
