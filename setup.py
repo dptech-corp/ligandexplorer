@@ -11,18 +11,18 @@ def wrapped_setup(scm=None):
         author_email='liyq@dp.tech',
         description=('Find ligand from strcuture and structured data'),
         license='MIT',
-        # Keep PyTorch generic: CUDA is an optional runtime choice and is
-        # never installed or checked by LigandExplorer's package setup.
         install_requires=[
                           'rarfile',
                           'networkx',
                           'biopython',
                           'numpy',
-                          'torch',
-                          'torch_geometric',
                           'scipy',
                           ],
         extras_require={
+            'gnn': [
+                'torch',
+                'torch_geometric',
+            ],
             'lgbm': [
                 'lightGBM',
                 'scikit-learn>=1.5',

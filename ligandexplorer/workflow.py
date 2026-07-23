@@ -481,8 +481,16 @@ def main():
     ModelContainer.backend = args.backend
     if args.backend == 'lgbm' and args.device == 'cuda':
         args.device = 'cpu'
+    if args.backend == 'gnn':
+        try:
+            import torch
+            import torch_geometric  # noqa: F401
+        except ImportError:
+            parser.error(
+                'The GNN backend requires PyTorch and torch_geometric. '
+                'Install a PyTorch build suitable for your platform, then '
+                'install torch_geometric.')
     if args.backend == 'gnn' and args.device == 'cuda':
-        import torch
         if not torch.cuda.is_available():
             parser.error(
                 'CUDA was explicitly requested, but CUDA is not available '

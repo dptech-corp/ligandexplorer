@@ -69,24 +69,29 @@ pip install torch torch_geometric
 # Installation Guide
 1. Prerequisites
 
-	Before installing, please ensure you have the necessary dependencies. The
-	default GNN execution uses CPU and installation does not probe for or
-	require CUDA:
+	Before installing, please install the PyTorch build appropriate for your
+	platform. LigandExplorer does not select a CPU or CUDA PyTorch build for
+	you, and installation does not probe for CUDA:
 
-		pip install numpy biopython networkx torch torch_geometric
+		# Install the PyTorch build selected for your platform, then:
+		pip install torch
+		pip install torch_geometric
 
 	If you need the legacy LightGBM backend:
 
 		pip install lightGBM
 
-	For a CPU-only PyTorch installation on Linux, install the CPU wheel before
-	installing LigandExplorer:
+	For a CPU-only PyTorch installation on Linux, use this instead of the
+	generic `pip install torch` command:
 
 		pip install --index-url https://download.pytorch.org/whl/cpu torch
 
 	Users who want CUDA must install a CUDA-enabled PyTorch build matching
 	their NVIDIA driver using the official PyTorch instructions. CUDA is only
-	used when `--device cuda` is explicitly provided.
+	used when `--device cuda` is explicitly provided. After selecting PyTorch,
+	install the package itself:
+
+		pip install .
 
 2. Clone the Repository
 
@@ -97,7 +102,8 @@ pip install torch torch_geometric
 
 3. Run the install script
 
-	Use the Python setup script to install LigandExplorer and its dependencies:
+	Use the Python setup script to install LigandExplorer and its non-ML
+	dependencies:
 
 		python setup.py install
 
