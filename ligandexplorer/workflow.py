@@ -199,7 +199,12 @@ def _gpu_inference_loop(request_queue, response_queue):
         _apply_chemical_rules, _run_sub_model)
     from torch_geometric.data import Data
     script_dir = pkg_resources.resource_filename('ligandexplorer', 'model')
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if not torch.cuda.is_available():
+        raise RuntimeError(
+            "CUDA was explicitly requested, but no CUDA-capable PyTorch "
+            "device is available. Install a CUDA-enabled PyTorch build and "
+            "check the NVIDIA driver, or run without --device cuda.")
+    device = torch.device("cuda")
 
     # --- Load models (resident on GPU) ---
     mol_model = MoleculeClassifier(num_classes=8)
@@ -476,6 +481,13 @@ def main():
     ModelContainer.backend = args.backend
     if args.backend == 'lgbm' and args.device == 'cuda':
         args.device = 'cpu'
+    if args.backend == 'gnn' and args.device == 'cuda':
+        import torch
+        if not torch.cuda.is_available():
+            parser.error(
+                'CUDA was explicitly requested, but CUDA is not available '
+                'in the current PyTorch environment. Use --device cpu or '
+                'install a CUDA-enabled PyTorch build.')
     ModelContainer.device_request = args.device
 
     try:

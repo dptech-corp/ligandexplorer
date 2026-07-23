@@ -69,13 +69,24 @@ pip install torch torch_geometric
 # Installation Guide
 1. Prerequisites
 
-	Before installing, please ensure you have the necessary dependencies. You can install them using pip:
+	Before installing, please ensure you have the necessary dependencies. The
+	default GNN execution uses CPU and installation does not probe for or
+	require CUDA:
 
-		pip install numpy biopython networkx scikit-learn torch torch_geometric
+		pip install numpy biopython networkx torch torch_geometric
 
 	If you need the legacy LightGBM backend:
 
 		pip install lightGBM
+
+	For a CPU-only PyTorch installation on Linux, install the CPU wheel before
+	installing LigandExplorer:
+
+		pip install --index-url https://download.pytorch.org/whl/cpu torch
+
+	Users who want CUDA must install a CUDA-enabled PyTorch build matching
+	their NVIDIA driver using the official PyTorch instructions. CUDA is only
+	used when `--device cuda` is explicitly provided.
 
 2. Clone the Repository
 
@@ -107,7 +118,7 @@ Here is a basic usage example:
 # Basic usage (GNN backend, CPU)
 ligandexplorer -i /path/to/your/input.zip -o /path/to/your/output_directory
 
-# With GPU acceleration
+# Optional CUDA acceleration (requires a CUDA-enabled PyTorch installation)
 ligandexplorer -i /path/to/your/input.zip -o /path/to/your/output_directory --device cuda
 
 # Using legacy LightGBM backend
@@ -149,8 +160,14 @@ options:
   -m {gnn,lgbm}, --backend {gnn,lgbm}
                         Model backend for ligand identification: gnn (default) or lgbm
   -d {cpu,cuda}, --device {cpu,cuda}
-                        Device for GNN inference: cpu (default) or cuda
+                        Device for GNN inference: cpu (default); cuda is only
+                        used when explicitly requested
 ```
+
+If `--device cuda` is specified but CUDA is unavailable in the current
+PyTorch environment, LigandExplorer exits with an error. It never silently
+falls back to CPU after an explicit CUDA request. Omitting `--device` or
+using `--device cpu` always uses the CPU path.
 
 # How to Cite
 
